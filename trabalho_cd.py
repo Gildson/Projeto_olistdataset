@@ -31,8 +31,8 @@ df12.set_axis(['Estado', 'Quantidade', 'Preço_total', 'Preço_min', 'Preço_max
                'Preço_médio', 'Frete_total', 'Frete_médio'], axis='columns', inplace=True)
 
 select_columns = {"Quantidade": "Quantidade",
-                "Preço_total": "Preço total",
-                "Frete_total": "Frete total"}
+                "Preço_médio": "Preço médio",
+                "Frete_médio": "Frete médio"}
 
 brazil_states = json.load(open("brazil_geo.json", "r"))
 
