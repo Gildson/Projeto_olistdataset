@@ -11,6 +11,17 @@ import numpy as np
 import pandas as pd
 import json
 
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from matplotlib import pyplot as plt
+
+data = pd.read_csv('olist_data_2018.csv')
+
+#Criação do modelo de rede neural para uma regressão
+              
 olist_dataset = pd.read_csv('my_dataset.csv')
 
 #Criar dataframe com analise das vendas
@@ -325,14 +336,45 @@ app.layout = dbc.Container(
                           "background-color": "#242424"
                           }), 
 
-            dbc.Col(
-                [
+            dbc.Col([
                     dcc.Loading(
                         id="loading-1-compras",
                         type="default",
                         children=[dcc.Graph(id="choropleth-map-compras", figure=fig_compras, 
-                            style={'height': '1400px', 'margin-right': '10px'})],
+                            style={'height': '1000px', 'margin-right': '10px', 'margin-button':'10px'})],
                     ),
+                    html.Div(
+                            className="div-for-dropdown",
+                            id="div-test-compras-ml",
+                            children=[
+                                dcc.Dropdown(['RR','AP','AM','PA','AC','RO',
+                                            'TO','MA','PI','CE','RN','PB',
+                                            'PE','AL','SE','BA','MT','DF',
+                                            'GO','MS','MG','ES','RJ','SP',
+                                            'PR','SC','RS'], 'RN', id='dropdown-state-compras-ml')
+                            ],
+                        ),
+
+                    dbc.Row([
+                        dbc.Col([dbc.Card([   
+                                dbc.CardBody([
+                                    html.Span("Previsão valor total de compras por estado", className="card-text"),
+                                    html.H2("R$", style={"color": "#adfc92"}),
+                                    html.H2(style={"color": "#adfc92"}, id="preco-medio-text-compras-ml"),
+                                    ])
+                                ], color="light", outline=True, style={"margin-top": "10px", 'height':'300px',
+                                        "box-shadow": "0 4px 4px 0 rgba(0, 0, 0, 0.15), 0 4px 20px 0 rgba(0, 0, 0, 0.19)",
+                                        "color": "#FFFFFF"})], md=6),
+                        dbc.Col([dbc.Card([   
+                                dbc.CardBody([
+                                    html.Span("Previsão valor média de produtos por estado", className="card-text"),
+                                    html.H2("R$", style={"color": "#adfc92"}),
+                                    html.H2(style={"color": "#adfc92"}, id="preco-total-text-compras-ml"),
+                                    ])
+                                ], color="light", outline=True, style={"margin-top": "10px", 'height':'300px',
+                                        "box-shadow": "0 4px 4px 0 rgba(0, 0, 0, 0.15), 0 4px 40px 0 rgba(0, 0, 0, 0.19)",
+                                        "color": "#FFFFFF"})], md=6),
+                    ])
                 ], md=7),
             ])
     ], fluid=True, 
@@ -367,6 +409,37 @@ def display_status(value):
     price = df32.Preço_total[df32.Estado == value].round(2)
     frete = df32.Frete_total[df32.Estado == value].round(2)
     return(quant, price, frete)
+
+#resultado da rede neural
+@app.callback(
+    [
+        Output("preco-medio-text-compras-ml", "children"),
+        Output("preco-total-text-compras-ml", "children"),
+    ],
+    [Input("dropdown-state-compras-ml", "value")]
+)
+def display_status(value):
+	model = keras.Sequential([
+		layers.Dense(100, activation='relu'),
+		layers.Dense(100, activation='relu'),
+		layers.Dense(1)
+	])
+
+	optimizer = tf.keras.optimizers.RMSprop(0.001)
+
+	model.compile(loss='mse',
+		optimizer=optimizer,
+		metrics=['mae', 'mse'])
+    	
+	data_local = data[data.customer_state == value].drop(columns = ['customer_state'])
+	labelencoder = LabelEncoder()
+	X = data_local.iloc[:,0:4].values
+	X[:,2] = labelencoder.fit_transform(X[:,2])
+	X = np.asarray(X).astype(np.float32)
+	quant1 = model.predict(X)
+	total = abs(np.round([quant1.sum()*15], 2))
+	media = abs(np.round([quant1.mean()*15], 2))
+	return(total, media)
 
 #gráfico interativo pie vendas
 @app.callback(
